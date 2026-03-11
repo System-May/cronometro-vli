@@ -1774,6 +1774,10 @@ _Relatório gerado automaticamente pelo SYSTEMAY_`;
             elements.whatsappModal.classList.remove('active');
         }
         
+        function resendToGoogleSheets(record) {
+            sendToGoogleSheets(record, true);
+        }
+        
         function renderHistory() {
             elements.historyCount.textContent = state.history.length;
             
@@ -1827,6 +1831,7 @@ _Relatório gerado automaticamente pelo SYSTEMAY_`;
                             </div>
                             <div class="history-actions">
                                 <button class="btn-success" onclick='sendWhatsApp(${JSON.stringify(record)})'>📱 WhatsApp</button>
+                                <button class="btn-info" onclick='resendToGoogleSheets(${JSON.stringify(record)})'>📤 Enviar p/ Planilha</button>
                                 <button class="btn-outline" onclick="toggleDetails(${record.id})"><span id="toggle-${record.id}">👁️ Ver Detalhes</span></button>
                             </div>
                         </div>
@@ -1978,14 +1983,20 @@ _Relatório gerado automaticamente pelo SYSTEMAY_`;
             try {
                 alert('🔄 Testando conexão...\n\nAguarde alguns segundos.');
                 
+                console.log('🧪 TESTE - URL:', url);
+                console.log('🧪 TESTE - Dados:', JSON.stringify(testData, null, 2));
+                
                 const response = await fetch(url, {
                     method: 'POST',
-                    mode: 'no-cors',
+                    redirect: 'follow',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'text/plain;charset=utf-8',
                     },
                     body: JSON.stringify(testData)
                 });
+                
+                console.log('🧪 TESTE - Status:', response.status);
+                console.log('🧪 TESTE - Type:', response.type);
                 
                 alert('✅ Teste enviado!\n\nVerifique se uma linha de teste apareceu na planilha do Google Sheets.\n\n💡 Se aparecer, a configuração está correta!');
             } catch (error) {
@@ -1994,16 +2005,20 @@ _Relatório gerado automaticamente pelo SYSTEMAY_`;
             }
         }
         
-        async function sendToGoogleSheets(record) {
+        async function sendToGoogleSheets(record, showAlert = false) {
             const url = localStorage.getItem('googleSheetsUrl');
             
             if (!url) {
                 console.log('ℹ️ Google Sheets não configurado. Pulando envio.');
+                if (showAlert) {
+                    alert('⚠️ Google Sheets não configurado!\n\nConfigure primeiro em "⚙️ Configurar Google Sheets"');
+                }
                 return false;
             }
             
             try {
-                console.log('📤 Enviando para Google Sheets...');
+                console.log('📤 ENVIANDO PARA GOOGLE SHEETS...');
+                console.log('📍 URL:', url);
                 
                 const data = {
                     test: false,
@@ -2022,19 +2037,35 @@ _Relatório gerado automaticamente pelo SYSTEMAY_`;
                     timestamp: new Date().toISOString()
                 };
                 
+                console.log('📦 DADOS A ENVIAR:', JSON.stringify(data, null, 2));
+                
                 const response = await fetch(url, {
                     method: 'POST',
-                    mode: 'no-cors',
+                    redirect: 'follow',
                     headers: {
-                        'Content-Type': 'application/json',
+                        'Content-Type': 'text/plain;charset=utf-8',
                     },
                     body: JSON.stringify(data)
                 });
                 
-                console.log('✅ Dados enviados para Google Sheets!');
+                console.log('✅ RESPOSTA RECEBIDA!');
+                console.log('📊 Status:', response.status);
+                console.log('📊 Type:', response.type);
+                
+                if (showAlert) {
+                    alert('✅ Dados enviados para Google Sheets!\n\nVerifique a planilha.');
+                }
+                
                 return true;
             } catch (error) {
-                console.error('❌ Erro ao enviar para Google Sheets:', error);
+                console.error('❌ ERRO AO ENVIAR PARA GOOGLE SHEETS:');
+                console.error('🔴 Mensagem:', error.message);
+                console.error('🔴 Stack:', error.stack);
+                
+                if (showAlert) {
+                    alert('❌ Erro ao enviar para Google Sheets:\n\n' + error.message + '\n\nVerifique o console (F12) para mais detalhes.');
+                }
+                
                 return false;
             }
         }
@@ -2044,7 +2075,7 @@ _Relatório gerado automaticamente pelo SYSTEMAY_`;
         // PWA: Service Worker Registration - VERSÃO SIMPLES E LEVE
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').then(registration => {
-                console.log('✅ Service Worker v3.17 registrado!');
+                console.log('✅ Service Worker v3.18 registrado!');
                 console.log('📱 App pronto para funcionar OFFLINE!');
                 
                 // Atualização automática
