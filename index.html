@@ -973,6 +973,7 @@
                     📋 Histórico (<span id="historyCount">0</span>)<span class="new-badge hidden" id="newBadge">NOVO</span>
                 </div>
                 <div class="header-actions">
+                    <button class="btn-info" onclick="configureGoogleSheets()">⚙️ Configurar Google Sheets</button>
                     <button class="btn-info" onclick="downloadExcelAll()">📥 Baixar Excel Completo</button>
                     <button class="btn-danger" onclick="clearHistoryPrompt()">🔒 Limpar Histórico (Senha)</button>
                 </div>
@@ -1037,6 +1038,34 @@
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <button class="btn-danger" onclick="confirmPassword()">✅ Confirmar</button>
                 <button class="btn-outline" onclick="cancelPassword()">❌ Cancelar</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Configuração Google Sheets -->
+    <div class="modal" id="googleSheetsModal">
+        <div class="modal-content">
+            <div class="modal-title">⚙️ Configurar Google Sheets</div>
+            <div class="alert alert-info">
+                <strong>📊 Envio Automático para Planilha</strong><br>
+                Configure a URL do Google Apps Script para enviar os dados automaticamente ao finalizar cada carregamento.<br><br>
+                <strong>📖 Instruções:</strong><br>
+                1. Acesse o arquivo <code>GOOGLE-SHEETS-SETUP.md</code><br>
+                2. Siga o passo a passo<br>
+                3. Cole a URL aqui
+            </div>
+            <div class="form-group">
+                <label for="googleSheetsUrl">URL do Google Apps Script:</label>
+                <input type="url" id="googleSheetsUrl" placeholder="https://script.google.com/macros/s/..." style="width: 100%; padding: 16px; border: 2px solid #d1d5db; border-radius: 10px; font-size: 14px; font-family: monospace;">
+            </div>
+            <div class="alert alert-success" id="googleSheetsStatus" style="display: none; margin-top: 16px;">
+                <strong>✅ Configurado!</strong><br>
+                Os dados serão enviados automaticamente ao finalizar cada carregamento.
+            </div>
+            <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+                <button class="btn-success" onclick="saveGoogleSheetsConfig()">✅ Salvar Configuração</button>
+                <button class="btn-danger" onclick="testGoogleSheetsConnection()">🧪 Testar Conexão</button>
+                <button class="btn-outline" onclick="closeGoogleSheetsModal()">❌ Fechar</button>
             </div>
         </div>
     </div>
@@ -1107,7 +1136,10 @@
             passwordModal: document.getElementById('passwordModal'),
             passwordInput: document.getElementById('passwordInput'),
             whatsappModal: document.getElementById('whatsappModal'),
-            whatsappSendAll: document.getElementById('whatsappSendAll')
+            whatsappSendAll: document.getElementById('whatsappSendAll'),
+            googleSheetsModal: document.getElementById('googleSheetsModal'),
+            googleSheetsUrl: document.getElementById('googleSheetsUrl'),
+            googleSheetsStatus: document.getElementById('googleSheetsStatus')
         };
         
         function formatTime(ms) {
@@ -1522,6 +1554,13 @@
             saveHistory();
             renderHistory();
             
+            // NOVO: Envia automaticamente para Google Sheets
+            sendToGoogleSheets(record).then(success => {
+                if (success) {
+                    console.log('✅ Dados enviados para Google Sheets automaticamente!');
+                }
+            });
+            
             // NOVO: Reseta também os timestamps
             state.totalTime = 0;
             state.isRunning = false;
@@ -1872,12 +1911,140 @@ _Relatório gerado automaticamente pelo SYSTEMAY_`;
             }
         });
         
+        // ===== GOOGLE SHEETS INTEGRATION =====
+        
+        function configureGoogleSheets() {
+            elements.googleSheetsModal.classList.add('active');
+            const savedUrl = localStorage.getItem('googleSheetsUrl');
+            if (savedUrl) {
+                elements.googleSheetsUrl.value = savedUrl;
+                elements.googleSheetsStatus.style.display = 'block';
+            } else {
+                elements.googleSheetsStatus.style.display = 'none';
+            }
+            
+            setTimeout(() => {
+                elements.googleSheetsModal.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                elements.googleSheetsUrl.focus();
+            }, 100);
+        }
+        
+        function closeGoogleSheetsModal() {
+            elements.googleSheetsModal.classList.remove('active');
+        }
+        
+        function saveGoogleSheetsConfig() {
+            const url = elements.googleSheetsUrl.value.trim();
+            
+            if (!url) {
+                alert('⚠️ Digite a URL do Google Apps Script!');
+                return;
+            }
+            
+            if (!url.startsWith('https://script.google.com/')) {
+                alert('⚠️ URL inválida! Deve começar com https://script.google.com/');
+                return;
+            }
+            
+            localStorage.setItem('googleSheetsUrl', url);
+            elements.googleSheetsStatus.style.display = 'block';
+            alert('✅ Configuração salva com sucesso!\n\nOs dados serão enviados automaticamente ao finalizar cada carregamento.');
+        }
+        
+        async function testGoogleSheetsConnection() {
+            const url = elements.googleSheetsUrl.value.trim();
+            
+            if (!url) {
+                alert('⚠️ Digite a URL do Google Apps Script primeiro!');
+                return;
+            }
+            
+            const testData = {
+                test: true,
+                userName: 'Teste',
+                vagaoType: 'GDE Carvão',
+                startDateTime: new Date().toISOString(),
+                endDateTime: new Date().toISOString(),
+                totalTime: '01:30:00',
+                productiveTime: '01:15:00',
+                stopTime: '00:15:00',
+                stopCount: 2,
+                stopEvents: [
+                    { reason: 'Teste 1', duration: '00:05:00' },
+                    { reason: 'Teste 2', duration: '00:10:00' }
+                ]
+            };
+            
+            try {
+                alert('🔄 Testando conexão...\n\nAguarde alguns segundos.');
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                alert('✅ Teste enviado!\n\nVerifique se uma linha de teste apareceu na planilha do Google Sheets.\n\n💡 Se aparecer, a configuração está correta!');
+            } catch (error) {
+                console.error('Erro ao testar:', error);
+                alert('⚠️ Erro ao testar conexão:\n\n' + error.message + '\n\nVerifique a URL e tente novamente.');
+            }
+        }
+        
+        async function sendToGoogleSheets(record) {
+            const url = localStorage.getItem('googleSheetsUrl');
+            
+            if (!url) {
+                console.log('ℹ️ Google Sheets não configurado. Pulando envio.');
+                return false;
+            }
+            
+            try {
+                console.log('📤 Enviando para Google Sheets...');
+                
+                const data = {
+                    test: false,
+                    userName: record.userName,
+                    vagaoType: record.vagaoType,
+                    startDateTime: record.startDateTime,
+                    endDateTime: record.endDateTime,
+                    totalTime: formatTime(record.totalTime),
+                    productiveTime: formatTime(record.productiveTime),
+                    stopTime: formatTime(record.totalTime - record.productiveTime),
+                    stopCount: record.stopEvents.length,
+                    stopEvents: record.stopEvents.map(event => ({
+                        reason: event.reason,
+                        duration: formatTime(event.duration)
+                    })),
+                    timestamp: new Date().toISOString()
+                };
+                
+                const response = await fetch(url, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(data)
+                });
+                
+                console.log('✅ Dados enviados para Google Sheets!');
+                return true;
+            } catch (error) {
+                console.error('❌ Erro ao enviar para Google Sheets:', error);
+                return false;
+            }
+        }
+        
         loadHistory();
         
         // PWA: Service Worker Registration - VERSÃO SIMPLES E LEVE
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('./sw.js').then(registration => {
-                console.log('✅ Service Worker v3.16 registrado!');
+                console.log('✅ Service Worker v3.17 registrado!');
                 console.log('📱 App pronto para funcionar OFFLINE!');
                 
                 // Atualização automática
