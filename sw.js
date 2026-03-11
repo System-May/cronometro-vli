@@ -1,4 +1,4 @@
-const CACHE_NAME = 'vli-cronometro-v3.16';
+const CACHE_NAME = 'vli-cronometro-v3.17';
 
 const urlsToCache = [
     './',
@@ -9,7 +9,7 @@ const urlsToCache = [
 
 // Instala e faz PRECACHE do HTML
 self.addEventListener('install', event => {
-    console.log('📦 Service Worker v3.16 instalando com PRECACHE...');
+    console.log('📦 Service Worker v3.17 instalando com PRECACHE...');
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -28,7 +28,7 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('activate', event => {
-    console.log('🔄 Service Worker v3.16 ativando...');
+    console.log('🔄 Service Worker v3.17 ativando...');
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
@@ -40,7 +40,7 @@ self.addEventListener('activate', event => {
                 })
             );
         }).then(() => {
-            console.log('✅ Service Worker v3.16 ativo!');
+            console.log('✅ Service Worker v3.17 ativo!');
             return self.clients.claim();
         })
     );
